@@ -69,7 +69,7 @@ const links = [
     name: "ChatGPT",
     url: "https://chat.openai.com/",
     icon: "https://img.icons8.com/ios7/1200/chatgpt.jpg",
-    fallback: "https://chat.openai.com/favicon.ico",
+    fallback: "https://static.vecteezy.com/system/resources/previews/021/059/827/original/chatgpt-logo-chat-gpt-icon-on-white-background-free-vector.jpg",
     category: "AI"
   },
   {
