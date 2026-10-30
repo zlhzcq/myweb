@@ -69,7 +69,7 @@ const links = [
     name: "ChatGPT",
     url: "https://chat.openai.com/",
     icon: "https://img.icons8.com/ios7/1200/chatgpt.jpg",
-    fallback: "https://static.vecteezy.com/system/resources/previews/021/059/827/original/chatgpt-logo-chat-gpt-icon-on-white-background-free-vector.jpg",
+    fallback: "https://tse2.mm.bing.net/th/id/OIP.9TZ8LcYn1uXte4B723kCpwHaHa?r=0&rs=1&pid=ImgDetMain&o=7&rm=3",
     category: "AI"
   },
   {
@@ -128,6 +128,13 @@ const links = [
     url: "https://google.com/",
     icon: "https://cdn.simpleicons.org/google/4285F4",
     fallback: "https://google.com/favicon.ico",
+    category: "工具"
+  },
+  {
+    name: "解析",
+    url: "dy_parser.html",
+    icon: "https://img0.baidu.com/it/u=3283514305,2723940896&fm=253&fmt=auto&app=138&f=PNG?w=299&h=299",
+    fallback: "https://bpic.51yuansu.com/pic3/cover/01/93/22/5982fd5182604_610.jpg?x-oss-process=image/resize,w_260/sharpen,100",
     category: "工具"
   }
 ];

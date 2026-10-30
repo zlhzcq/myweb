@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>短视频 - 解析去水印</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background-color: #f4f5f7; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: #333; padding: 16px; }
+    
+    /* 页面主卡片 */
+    .container { max-width: 500px; margin: 0 auto; }
+    .card { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .header-title { font-size: 18px; font-weight: bold; margin-bottom: 8px; color: #222; }
+    .sub-tip { font-size: 13px; color: #666; margin-bottom: 18px; line-height: 1.5; }
+
+    /* 输入框组 */
+    .input-group { display: flex; border: 1px solid #e0e0e0; border-radius: 4px; overflow: hidden; margin-bottom: 16px; background: #fff; }
+    .input-label { display: flex; align-items: center; justify-content: center; min-width: 80px; padding: 0 12px; font-size: 14px; color: #555; background: #fafafa; border-right: 1px solid #e0e0e0; white-space: nowrap; }
+    .input-group input { flex: 1; padding: 12px; border: none; outline: none; font-size: 14px; background: transparent; }
+
+    /* 主按钮 */
+    .btn-parse { width: 100%; padding: 12px; background-color: #008f7a; color: #fff; border: none; border-radius: 20px; font-size: 16px; font-weight: 500; cursor: pointer; transition: background 0.2s; }
+    .btn-parse:hover { background-color: #007565; }
+    .btn-parse:disabled { background-color: #a0d4ca; cursor: not-allowed; }
+
+    /* 解析结果区域 */
+    .result-box { margin-top: 20px; padding-top: 16px; border-top: 1px dashed #eee; display: none; }
+    .result-item { margin-bottom: 14px; font-size: 14px; }
+    .result-label { color: #666; font-weight: 500; margin-right: 8px; }
+    
+    /* 链接行与复制按钮 */
+    .link-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+    .link-text { color: #1890ff; word-break: break-all; font-size: 13px; background: #f8fbff; padding: 6px 10px; border-radius: 4px; flex: 1; min-width: 200px; }
+    .btn-copy { padding: 6px 12px; font-size: 12px; color: #008f7a; background: #e6f6f2; border: 1px solid #b2dfd5; border-radius: 4px; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
+    .btn-copy:hover { background: #d4eee8; }
+    .btn-copy.copied { background: #008f7a; color: #fff; border-color: #008f7a; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="card">
+    <div class="header-title">使用方法：</div>
+    <div class="sub-tip">请将复制视频的链接粘贴到下面的输入框解析。</div>
+
+    <div class="input-group">
+      <div class="input-label">视频链接：</div>
+      <input type="text" id="videoUrl" placeholder="粘贴含有链接的文字也可以..." autocomplete="off">
+    </div>
+
+    <button class="btn-parse" id="parseBtn" onclick="startParse()">开始解析</button>
+
+    <!-- 结果展示区域 -->
+    <div class="result-box" id="resultBox">
+      <div class="result-item" id="titleItem">
+        <span class="result-label">标题：</span>
+        <span id="videoTitle" style="color: #333;">正在获取...</span>
+      </div>
+      
+      <div class="result-item">
+        <div class="result-label">无水印视频链接：</div>
+        <div class="link-line">
+          <span class="link-text" id="videoLink">等待解析...</span>
+          <button class="btn-copy" id="copyBtn" onclick="copyLink()">复制链接</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ⚠️ 这是你本地运行的 Flask 后端地址
+  // 如果你以后把后端部署到了服务器上，把这里改成你的服务器域名或 IP
+  const BACKEND_API = "http://127.0.0.1:5000/api/parse";
+
+  async function startParse() {
+    let input = document.getElementById('videoUrl').value.trim();
+    const btn = document.getElementById('parseBtn');
+    const resultBox = document.getElementById('resultBox');
+    const titleEl = document.getElementById('videoTitle');
+    const linkEl = document.getElementById('videoLink');
+    const copyBtn = document.getElementById('copyBtn');
+
+    if (!input) {
+      alert('请输入或粘贴抖音分享链接');
+      return;
+    }
+
+    // 提取纯链接
+    const urlMatch = input.match(/(https?:\/\/[^\s]+)/);
+    if (urlMatch) {
+      input = urlMatch[0];
+    } else {
+      alert('未找到有效链接，请检查输入内容');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = '解析中...';
+    resultBox.style.display = 'none';
+
+    try {
+      console.log("正在请求本地后端：", BACKEND_API);
+      
+      // 发送 POST 请求到你写的 Python 后端
+      const response = await fetch(BACKEND_API, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ url: input })
+      });
+
+      // 如果 HTTP 状态码不是 200，抛出错误
+      if (!response.ok) {
+        throw new Error(`后端服务响应异常，状态码: ${response.status}`);
+      }
+
+      const resData = await response.json();
+      console.log("后端返回数据：", resData);
+
+      // 判断后端返回的 success 字段
+      if (!resData.success) {
+        throw new Error(resData.msg || "解析失败");
+      }
+
+      // 渲染结果（这里的字段名要和 Python 后端返回的对应）
+      titleEl.textContent = resData.title || '无标题';
+      linkEl.textContent = resData.videoUrl;
+      linkEl.href = resData.videoUrl;
+      linkEl.target = '_blank';
+      linkEl.style.textDecoration = 'underline';
+      
+      copyBtn.textContent = '复制链接';
+      copyBtn.classList.remove('copied');
+      resultBox.style.display = 'block';
+
+    } catch (err) {
+      alert("解析出错：" + err.message);
+      console.error("详细错误：", err);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '开始解析';
+    }
+  }
+
+  // 复制功能
+  function copyLink() {
+    const linkText = document.getElementById('videoLink').textContent;
+    const copyBtn = document.getElementById('copyBtn');
+    if (!linkText || linkText === '等待解析...') return;
+
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(linkText).then(() => {
+        showCopied(copyBtn);
+      }).catch(() => {
+        fallbackCopy(linkText, copyBtn);
+      });
+    } else {
+      fallbackCopy(linkText, copyBtn);
+    }
+  }
+
+  function fallbackCopy(text, btn) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.opacity = '0';
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      showCopied(btn);
+    } catch (err) {
+      alert('复制失败');
+    }
+    document.body.removeChild(textArea);
+  }
+
+  function showCopied(btn) {
+    btn.textContent = '复制成功';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '复制链接';
+      btn.classList.remove('copied');
+    }, 2000);
+  }
+</script>
+
+</body>
+</html>
