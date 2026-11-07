@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网易云音乐外链解析</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f2f5f9;
+            display: flex;
+            justify-content: center;
+            padding-top: 10vh;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: #ffffff;
+            width: 600px;
+            max-width: 90%;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            height: fit-content;
+        }
+
+        .header {
+            margin-bottom: 20px;
+        }
+
+        .header h2 {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .input-group {
+            display: flex;
+            border: 1px solid #dcdfe6;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .input-group span {
+            background-color: #f5f7fa;
+            padding: 0 15px;
+            display: flex;
+            align-items: center;
+            border-right: 1px solid #dcdfe6;
+            color: #606266;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        .input-group input {
+            flex: 1;
+            border: none;
+            padding: 12px 15px;
+            font-size: 14px;
+            outline: none;
+            color: #333;
+        }
+
+        .input-group input::placeholder {
+            color: #c0c4cc;
+        }
+
+        .btn {
+            width: 100%;
+            background-color: #009688; /* 类似图片中的绿色 */
+            color: white;
+            border: none;
+            padding: 12px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .btn:hover {
+            background-color: #00796b;
+        }
+
+        /* 结果展示区样式 */
+        .result-box {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            display: none; /* 默认隐藏 */
+            word-break: break-all;
+        }
+
+        .result-box.error {
+            background-color: #fef0f0;
+            border-color: #fde2e2;
+            color: #f56c6c;
+        }
+
+        .result-box.success {
+            display: block;
+        }
+
+        .result-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .link-text {
+            color: #009688;
+            text-decoration: none;
+            font-size: 14px;
+            display: block;
+            margin-bottom: 15px;
+        }
+
+        .link-text:hover {
+            text-decoration: underline;
+        }
+
+        .action-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .action-btn {
+            padding: 6px 12px;
+            font-size: 13px;
+            border-radius: 3px;
+            border: 1px solid #009688;
+            background-color: transparent;
+            color: #009688;
+            cursor: pointer;
+        }
+
+        .action-btn:hover {
+            background-color: #009688;
+            color: white;
+        }
+
+        audio {
+            width: 100%;
+            height: 40px;
+            outline: none;
+        }
+
+        .extracted-id {
+            font-size: 13px;
+            color: #909399;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h2>网易云外链提取工具</h2>
+        <p>请将复制的网易云音乐分享链接（手机端/电脑端均可）粘贴到下面的输入框解析。</p>
+    </div>
+
+    <div class="input-group">
+        <span>链接/ID：</span>
+        <input type="text" id="urlInput" placeholder="粘贴含有链接的文字也可以...">
+    </div>
+
+    <button class="btn" onclick="parseMusic()">开始解析</button>
+
+    <!-- 结果展示区域 -->
+    <div id="resultBox" class="result-box">
+        <div id="resultContent"></div>
+    </div>
+</div>
+
+<script>
+    function parseMusic() {
+        const inputVal = document.getElementById('urlInput').value.trim();
+        const resultBox = document.getElementById('resultBox');
+        const resultContent = document.getElementById('resultContent');
+
+        // 如果输入为空
+        if (!inputVal) {
+            resultBox.className = 'result-box success error';
+            resultContent.innerHTML = '请输入有效的链接或 ID！';
+            return;
+        }
+
+        // 正则表达式：匹配 "id=" 后面的数字，或者如果直接输入的是纯数字，也匹配
+        // 适用于：
+        // https://y.music.163.com/m/song?id=1399112638&...
+        // https://music.163.com/#/song?id=1399112638
+        // 1399112638
+        const idRegex = /(?:id=)(\d+)/;
+        const pureIdRegex = /^\d+$/;
+        
+        let songId = null;
+
+        const match = inputVal.match(idRegex);
+        if (match && match[1]) {
+            songId = match[1];
+        } else if (pureIdRegex.test(inputVal)) {
+            songId = inputVal;
+        }
+
+        // 处理解析结果
+        if (songId) {
+            const outerUrl = `https://music.163.com/song/media/outer/url?id=${songId}`;
+            
+            resultBox.className = 'result-box success';
+            resultContent.innerHTML = `
+                <div class="extracted-id">成功提取歌曲 ID：${songId}</div>
+                <div class="result-title">生成的直链地址：</div>
+                <a href="${outerUrl}" target="_blank" class="link-text" id="finalLink">${outerUrl}</a>
+                
+                <div class="action-row">
+                    <button class="action-btn" onclick="copyLink('${outerUrl}')">复制链接</button>
+                    <button class="action-btn" onclick="window.open('${outerUrl}', '_blank')">直接下载</button>
+                </div>
+                
+                <div class="result-title" style="font-size:13px; margin-bottom:5px; color:#666;">在线试听：</div>
+                <audio controls src="${outerUrl}">
+                    您的浏览器不支持 audio 元素。
+                </audio>
+            `;
+        } else {
+            // 没有匹配到 ID
+            resultBox.className = 'result-box success error';
+            resultContent.innerHTML = '未能识别出歌曲 ID，请检查粘贴的链接是否包含 <b>id=数字</b>，或者直接输入纯数字 ID。';
+        }
+    }
+
+    // 复制链接功能
+    function copyLink(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            alert('直链已复制到剪贴板！');
+        }).catch(err => {
+            // 兼容旧版浏览器
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            alert('直链已复制到剪贴板！');
+        });
+    }
+
+    // 支持回车键解析
+    document.getElementById('urlInput').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            parseMusic();
+        }
+    });
+</script>
+
+</body>
+</html>

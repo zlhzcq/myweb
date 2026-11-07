@@ -131,10 +131,17 @@ const links = [
     category: "工具"
   },
   {
-    name: "解析",
+    name: "视频解析",
     url: "dy_parser.html",
     icon: "https://img0.baidu.com/it/u=3283514305,2723940896&fm=253&fmt=auto&app=138&f=PNG?w=299&h=299",
     fallback: "https://bpic.51yuansu.com/pic3/cover/01/93/22/5982fd5182604_610.jpg?x-oss-process=image/resize,w_260/sharpen,100",
+    category: "工具"
+  },
+  {
+    name: "音乐解析",
+    url: "music.html",
+    icon: "https://cdn.simpleicons.org/neteasecloudmusic/C20C0C",
+    fallback: "https://music.163.com/favicon.ico",
     category: "工具"
   }
 ];
